@@ -1,0 +1,61 @@
+{
+  "name": "simulation-3d-hof",
+  "version": "0.1.0",
+  "description": "3D Orofacial Harmonization Simulation App - Real-time 3D simulation for educational purposes",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/admin-dashboard"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "clean": "npm run clean --workspaces",
+    "dev": "npm run dev --workspaces",
+    "bootstrap": "npm install && npm run build",
+    "security-check": "npm audit --audit-level=high",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "3d-simulation",
+    "arkit",
+    "medical-education",
+    "orofacial-harmonization",
+    "healthcare"
+  ],
+  "author": "Alvaro BC Med",
+  "license": "PROPRIETARY",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alvarobcmed/simulation-3d-hof.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alvarobcmed/simulation-3d-hof/issues"
+  },
+  "homepage": "https://github.com/alvarobcmed/simulation-3d-hof#readme",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.3",
+    "prettier": "^3.0.0",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx,json,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.md": [
+      "markdownlint --fix"
+    ]
+  }
+}
