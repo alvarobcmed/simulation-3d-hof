@@ -1,0 +1,230 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # Quality gates and security scanning
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Backend services testing
+  backend-test:
+    name: Backend Services Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, simulation-service, crm-integration, auth-service]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd services/${{ matrix.service }}
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+
+      - name: Run tests
+        run: |
+          cd services/${{ matrix.service }}
+          if [ -f pytest.ini ] || [ -f pyproject.toml ]; then
+            pytest --cov=. --cov-report=xml --cov-report=term
+          fi
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./services/${{ matrix.service }}/coverage.xml
+          flags: backend-${{ matrix.service }}
+
+  # iOS application testing
+  ios-test:
+    name: iOS Application Test
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+
+      - name: Build and test
+        run: |
+          cd apps/ios-app
+          if [ -f ios-app.xcodeproj/project.pbxproj ]; then
+            xcodebuild test -project ios-app.xcodeproj -scheme ios-app -destination 'platform=iOS Simulator,name=iPhone 14' CODE_SIGNING_ALLOWED=NO
+          fi
+
+  # Shared packages testing
+  packages-test:
+    name: Packages Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [shared-types, common-utils, sdk]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies and test
+        run: |
+          cd packages/${{ matrix.package }}
+          if [ -f package.json ]; then
+            npm ci
+            npm test
+          fi
+
+  # Infrastructure validation
+  infrastructure-validate:
+    name: Infrastructure Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.5.0'
+
+      - name: Terraform Format Check
+        run: |
+          cd infrastructure/terraform
+          if [ -f main.tf ]; then
+            terraform fmt -check
+          fi
+
+      - name: Terraform Validate
+        run: |
+          cd infrastructure/terraform
+          if [ -f main.tf ]; then
+            terraform init -backend=false
+            terraform validate
+          fi
+
+      - name: Kubernetes Manifest Validation
+        run: |
+          cd infrastructure/kubernetes
+          if ls *.yaml >/dev/null 2>&1; then
+            # Install kubeval for manifest validation
+            wget -O kubeval.tar.gz https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+            tar xf kubeval.tar.gz
+            sudo mv kubeval /usr/local/bin
+            kubeval *.yaml
+          fi
+
+  # Documentation validation
+  docs-validate:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint markdown files
+        uses: nosborn/github-action-markdown-cli@v3.3.0
+        with:
+          files: '**/*.md'
+          config_file: '.markdownlint.json'
+          ignore_files: '.markdownlintignore'
+
+      - name: Check links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+
+  # Quality gate aggregation
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [security-scan, backend-test, ios-test, packages-test, infrastructure-validate, docs-validate]
+    if: always()
+    
+    steps:
+      - name: Check quality gate
+        run: |
+          if [[ "${{ needs.security-scan.result }}" != "success" ]]; then
+            echo "Security scan failed"
+            exit 1
+          fi
+          if [[ "${{ needs.backend-test.result }}" != "success" ]]; then
+            echo "Backend tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.infrastructure-validate.result }}" != "success" ]]; then
+            echo "Infrastructure validation failed"
+            exit 1
+          fi
+          if [[ "${{ needs.docs-validate.result }}" != "success" ]]; then
+            echo "Documentation validation failed"
+            exit 1
+          fi
+          echo "All quality gates passed!"

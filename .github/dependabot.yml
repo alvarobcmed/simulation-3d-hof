@@ -1,0 +1,116 @@
+version: 2
+updates:
+  # Backend services dependencies
+  - package-ecosystem: "pip"
+    directory: "/services/api-gateway"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "backend"
+
+  - package-ecosystem: "pip"
+    directory: "/services/simulation-service"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "backend"
+
+  - package-ecosystem: "pip"
+    directory: "/services/crm-integration"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "backend"
+
+  - package-ecosystem: "pip"
+    directory: "/services/auth-service"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "backend"
+
+  # Node.js packages dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/shared-types"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "packages"
+
+  - package-ecosystem: "npm"
+    directory: "/packages/common-utils"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "packages"
+
+  - package-ecosystem: "npm"
+    directory: "/packages/sdk"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "packages"
+
+  # Admin dashboard dependencies
+  - package-ecosystem: "npm"
+    directory: "/apps/admin-dashboard"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/infrastructure/docker"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "infrastructure"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alvarobcmed"
+    labels:
+      - "dependencies"
+      - "ci-cd"
